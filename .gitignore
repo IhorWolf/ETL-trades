@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.egg-info/
+
+# Environment variables
+.env
+.env.local
+
+# Data files (don't commit large data)
+data/
+*.csv
+*.parquet
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Logs
+logs/
+*.log
+
+# Credentials (IMPORTANT!)
+credentials.json
+*.key
+config/secrets.yaml
