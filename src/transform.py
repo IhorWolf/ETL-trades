@@ -5,42 +5,33 @@ Transform data according to business logic
 3. Calculate FIFO PnL for closed positions only
 '''
 import pandas as pd
-import logging
 from collections import deque
-
-logger = logging.getLogger(__name__)
+from datetime import datetime
 
 
 class DataTransformer:
-    def __init__(self, date_format='%Y-%m-%d %H:%M:%S'):
+    def __init__(self, date_format='%Y-%m-%d'):
         self.date_format = date_format
 
     def clean_data(self, df):
         """Clean and validate data"""
-        logger.info("Cleaning data...")
         initial_count = len(df)
         df = df.drop_duplicates()
-        logger.info(f"Removed {initial_count - len(df)} duplicate records")
         df = df.dropna(subset=['timestamp', 'user_id', 'symbol', 'side'])
         return df
 
     def parse_dates(self, df):
         """Parse timestamp column"""
-        logger.info("Parsing dates...")
         df['timestamp'] = pd.to_datetime(
             df['timestamp'],
             format=self.date_format,
             errors='coerce'
         )
-        invalid_dates = df['timestamp'].isna().sum()
-        if invalid_dates > 0:
-            logger.warning(f"Found {invalid_dates} invalid timestamps")
         df = df.dropna(subset=['timestamp'])
         return df
 
     def create_weekly_date(self, df):
         """Create weekly start date (Monday)"""
-        logger.info("Creating weekly start dates...")
         df['weekly_start_date'] = (
             df['timestamp']
             .dt.to_period('W-MON')
@@ -60,8 +51,6 @@ class DataTransformer:
         - opened_qty: Quantity of new positions opened in that week
         - open_position: Net open position at end of week (+ = long, - = short)
         """
-        logger.info("Calculating FIFO PnL for closed positions...")
-        
         df_sorted = df.sort_values(['user_id', 'client_type', 'symbol', 'timestamp']).copy()
         results = []
         
@@ -128,13 +117,10 @@ class DataTransformer:
                     'open_position': round(total_open, 2)
                 })
         
-        logger.info(f"Calculated PnL for {len(results)} week/symbol combinations")
         return pd.DataFrame(results)
 
     def aggregate_trades(self, df):
         """Aggregate trades by weekly_start_date, user_id, client_type, symbol"""
-        logger.info("Aggregating trades...")
-        
         groupby_cols = ['weekly_start_date', 'user_id', 'client_type', 'symbol']
         
         agg_df = df.groupby(groupby_cols).agg({
@@ -150,39 +136,31 @@ class DataTransformer:
 
     def transform(self, df):
         """Main transformation pipeline"""
-        try:
-            logger.info("Starting transformation...")
-            
-            # Clean and prepare data
-            df = self.clean_data(df)
-            df = self.parse_dates(df)
-            df = self.create_weekly_date(df)
-            
-            # Get volume aggregations
-            agg_df = self.aggregate_trades(df)
-            
-            # Get FIFO PnL calculations
-            pnl_df = self.calculate_fifo_pnl(df)
-            
-            # Merge results
-            result = agg_df.merge(
-                pnl_df,
-                on=['weekly_start_date', 'user_id', 'client_type', 'symbol'],
-                how='left'
-            )
-            
-            # Fill any missing PnL values with 0
-            result['closed_pnl'] = result['closed_pnl'].fillna(0)
-            result['closed_qty'] = result['closed_qty'].fillna(0)
-            result['opened_qty'] = result['opened_qty'].fillna(0)
-            result['open_position'] = result['open_position'].fillna(0)
-            
-            logger.info(f"Transformation complete. Output: {len(result)} records")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Error during transformation: {str(e)}")
-            raise
+        # Clean and prepare data
+        df = self.clean_data(df)
+        df = self.parse_dates(df)
+        df = self.create_weekly_date(df)
+        
+        # Get volume aggregations
+        agg_df = self.aggregate_trades(df)
+        
+        # Get FIFO PnL calculations
+        pnl_df = self.calculate_fifo_pnl(df)
+        
+        # Merge results
+        result = agg_df.merge(
+            pnl_df,
+            on=['weekly_start_date', 'user_id', 'client_type', 'symbol'],
+            how='left'
+        )
+        
+        # Fill any missing PnL values with 0
+        result['closed_pnl'] = result['closed_pnl'].fillna(0)
+        result['closed_qty'] = result['closed_qty'].fillna(0)
+        result['opened_qty'] = result['opened_qty'].fillna(0)
+        result['open_position'] = result['open_position'].fillna(0)
+        
+        return result
 
 
 # Standalone function for backward compatibility

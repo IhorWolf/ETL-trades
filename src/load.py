@@ -1,39 +1,25 @@
 import pandas as pd
-import logging
 from pathlib import Path
+from src.analytics import TopClientsAnalytics
 
-logger = logging.getLogger(__name__)
 
 class DataLoader:
     def __init__(self, output_dir):
         self.output_dir = Path(output_dir)
-        
-        # Create directories if they don't exist
         self.output_dir.mkdir(parents=True, exist_ok=True)
     
     def validate_data(self, df):
         """Validate data before loading"""
         if df.empty:
             raise ValueError("Cannot load empty dataframe")
-        logger.info(f"Validated {len(df)} records for loading")
         return True
     
     def load(self, df, file_name, index=False):
         """Load data to CSV file"""
-        try:
-            self.validate_data(df)
-            
-            file_path = self.output_dir / file_name
-            
-            # Save to CSV (overwrite existing file)
-            df.to_csv(file_path, index=index)
-            logger.info(f"Data loaded successfully to {file_path}")
-            
-            return file_path
-            
-        except Exception as e:
-            logger.error(f"Error loading data: {str(e)}")
-            raise
+        self.validate_data(df)
+        file_path = self.output_dir / file_name
+        df.to_csv(file_path, index=index)
+        return file_path
     
     def load_top_clients_analytics(self, df, volume_filename, pnl_filename, top_n=3):
         """
@@ -48,31 +34,20 @@ class DataLoader:
         Returns:
             Tuple of (volume_path, pnl_path)
         """
-        logger.info("="*50)
-        logger.info(f"Generating Top {top_n} Clients Report")
-        logger.info("="*50)
+        # Calculate analytics
+        analytics = TopClientsAnalytics(df)
         
-        try:
-            from src.analytics import DataAnalytics
-            
-            # Calculate analytics
-            analytics = DataAnalytics()
-            analytics_results = analytics.get_top_clients(df, top_n=top_n)
-            
-            if analytics_results is None:
-                logger.error("No analytics results to save")
-                return None, None
-            
-            # Save top by volume
-            volume_path = self.load(analytics_results['top_by_volume'], volume_filename)
-            
-            # Save top by PnL
-            pnl_path = self.load(analytics_results['top_by_pnl'], pnl_filename)
-            
-            logger.info(f"Analytics saved: Volume={volume_path}, PnL={pnl_path}")
-            
-            return volume_path, pnl_path
-            
-        except Exception as e:
-            logger.error(f"Error loading analytics: {str(e)}")
-            raise
+        # Get top clients
+        top_by_volume = analytics.get_top_clients_by_volume(top_n)
+        top_by_pnl = analytics.get_top_clients_by_pnl(top_n)
+        
+        if top_by_volume is None or top_by_pnl is None:
+            return None, None
+        
+        # Save top by volume
+        volume_path = self.load(top_by_volume, volume_filename)
+        
+        # Save top by PnL
+        pnl_path = self.load(top_by_pnl, pnl_filename)
+                    
+        return volume_path, pnl_path

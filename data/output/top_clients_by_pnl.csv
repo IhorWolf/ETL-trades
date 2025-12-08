@@ -1,4 +1,4 @@
-rank,user_id,client_type,closed_pnl,total_volume
-1,3003,bronze,1624.48,285.98
-2,3005,bronze,-263.85999999999996,298.57
-3,3004,bronze,-285.88,283.57
+user_id,total_pnl
+3003,1624.48
+3005,-263.85999999999996
+3004,-285.88
