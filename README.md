@@ -51,7 +51,7 @@ python3 main.py
 - Cleans data (duplicates, missing values)
 - Parses dates and groups by week (Monday start)
 - Aggregates trades by: week, user, client type, symbol
-- Calculates PnL, opened/closed positions
+- Calculates total volume, total trades, cumulative volume, unrealized/realized/total PnL
 
 ### 3. **Load** 
 Creates 3 output files:
