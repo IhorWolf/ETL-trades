@@ -223,7 +223,7 @@ class DataTransformer:
         
         agg_df['trade_volume'] = agg_df['trade_volume'].round(2)
         
-        agg_df['cumulative_trade_volume'] = agg_df.groupby(['user_id', 'client_type', 'symbol'])['trade_volume'].cumsum()
+        agg_df['cumulative_trade_volume'] = agg_df.groupby(['user_id', 'client_type'])['trade_volume'].cumsum()
         agg_df['cumulative_trade_volume'] = agg_df['cumulative_trade_volume'].round(2)
         
         return agg_df
