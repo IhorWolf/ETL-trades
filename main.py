@@ -14,21 +14,16 @@ def main():
         
         # Transform
         transformer = DataTransformer(date_format=Config.DATE_FORMAT)
-        transformed_df = transformer.transform(df)
+        agg_df, client_pnl_df = transformer.transform(df)
         
         # Load
         loader = DataLoader(output_dir=Config.OUTPUT_DIR)
         
-        # Load main ETL output
-        loader.load(transformed_df, Config.OUTPUT_FILE)
+        # 1. Load aggregated trades weekly
+        loader.load(agg_df, Config.OUTPUT_FILE)
         
-        # Load analytics output
-        loader.load_top_clients_analytics(
-            transformed_df,
-            Config.TOP_CLIENTS_VOLUME_FILE,
-            Config.TOP_CLIENTS_PNL_FILE,
-            top_n=3
-        )
+        # 2. Load all analytics (top volume + top pnl)
+        loader.load_all_analytics(agg_df, client_pnl_df, Config)
         
         print("ETL completed successfully")
         

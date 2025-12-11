@@ -1,6 +1,5 @@
 import pandas as pd
 from pathlib import Path
-from src.analytics import TopClientsAnalytics
 
 
 class DataLoader:
@@ -10,8 +9,8 @@ class DataLoader:
     
     def validate_data(self, df):
         """Validate data before loading"""
-        if df.empty:
-            raise ValueError("Cannot load empty dataframe")
+        if df is None or df.empty:
+            raise ValueError("Cannot load empty or None dataframe")
         return True
     
     def load(self, df, file_name, index=False):
@@ -19,35 +18,40 @@ class DataLoader:
         self.validate_data(df)
         file_path = self.output_dir / file_name
         df.to_csv(file_path, index=index)
+        print(f"Saved {file_name} to {file_path}")
         return file_path
     
-    def load_top_clients_analytics(self, df, volume_filename, pnl_filename, top_n=3):
+    def load_all_analytics(self, agg_df, client_pnl_df, config, client_type='bronze', top_n=3):
         """
-        Generate and load top bronze clients analytics.
+        Calculate and load all analytics outputs.
         
         Args:
-            df: Transformed DataFrame with aggregated trade data
-            volume_filename: CSV filename for top by volume
-            pnl_filename: CSV filename for top by PnL
-            top_n: Number of top clients (default 3)
+            agg_df: Aggregated trades DataFrame
+            client_pnl_df: Client PnL DataFrame
+            config: Config object with file names
+            client_type: Type of client to filter (default: 'bronze')
+            top_n: Number of top clients to return (default: 3)
         
         Returns:
-            Tuple of (volume_path, pnl_path)
+            dict with output paths
         """
-        # Calculate analytics
-        analytics = TopClientsAnalytics(df)
+        paths = {}
         
-        # Get top clients
-        top_by_volume = analytics.get_top_clients_by_volume(top_n)
-        top_by_pnl = analytics.get_top_clients_by_pnl(top_n)
+        # Top clients by volume
+        filtered = agg_df[agg_df['client_type'] == client_type]
+        top_volume = filtered.groupby('user_id').agg({
+            'trade_volume': 'sum',
+            'trade_count': 'sum'
+        }).reset_index()
+        top_volume = top_volume.nlargest(top_n, 'trade_volume')
+        top_volume['trade_volume'] = top_volume['trade_volume'].round(2)
+        paths['volume'] = self.load(top_volume, config.TOP_CLIENTS_VOLUME_FILE)
         
-        if top_by_volume is None or top_by_pnl is None:
-            return None, None
+        # Top clients by PnL
+        filtered_pnl = client_pnl_df[client_pnl_df['client_type'] == client_type]
+        top_pnl = filtered_pnl.nlargest(top_n, 'total_pnl')[
+            ['user_id', 'unrealized_pnl', 'realized_pnl', 'total_pnl']
+        ].reset_index(drop=True)
+        paths['pnl'] = self.load(top_pnl, config.TOP_CLIENTS_PNL_FILE)
         
-        # Save top by volume
-        volume_path = self.load(top_by_volume, volume_filename)
-        
-        # Save top by PnL
-        pnl_path = self.load(top_by_pnl, pnl_filename)
-                    
-        return volume_path, pnl_path
+        return paths

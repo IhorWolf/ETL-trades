@@ -51,8 +51,7 @@ python3 main.py
 - Cleans data (duplicates, missing values)
 - Parses dates and groups by week (Monday start)
 - Aggregates trades by: week, user, client type, symbol
-- Calculates PnL
-- Calculates opened/closed positions
+- Calculates PnL, opened/closed positions
 
 ### 3. **Load** 
 Creates 3 output files:
@@ -61,7 +60,8 @@ Creates 3 output files:
 - `top_clients_by_pnl.csv` - top 3 bronze clients by profit
 
 
-### 4. Automation
+
+### Automation
 
 This ETL pipeline can run automatically via GitHub Actions:
 
@@ -74,16 +74,39 @@ This ETL pipeline can run automatically via GitHub Actions:
 2. Select **ETL Pipeline** workflow
 3. Click **Run workflow**
 
-### View Results
+### View output data
 Download artifacts (logs & output files) from the workflow run page.
 
 ### Setup
 1. Create `.github/workflows/etl-pipeline.yml`
 3. Commit and push
 
-### 5. Scaling
+## Как бы вы адаптировали решение под 100+ млн строк:
+    Какие технологии замените/добавите?
+        AirFlow (cost efficiency Step Functions)
+        Spark/Pyspark instead pure Python
+        SQL/PosgreSQL for modeling/storage data
+    Какую архитектуру ETL предложите?
+    Crypto Exchanges (APIs)
+         |
+    Orchestration  (Step Functions /managed Airflow)
+         |
+    PySpark (EMR Serverless/AWS Glue)                
+    - Validate & Clean                    
+    - Transform & Aggregate               
+    - Calculate metrics                                                            
+        if DEBUG_MODE: ──→ S3 /debug/(24h lifecycle)           
+         |
+    PostgreSQL / TimescaleDB (aggregated data only) as option Clickhouse
 
-
+    Какие метрики мониторинга ETL вы бы внедрили?
+    ETL metrics: 
+        execution runtime, 
+        row counts(input/output)
+    Bussiness metrics: 
+        anomaly trade volume long/short side,
+        position inbalance,
+        pnl outlayeries
 
 ## Dependencies
 
